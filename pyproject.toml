@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shorts-maker"
+version = "0.1.0"
+description = "Autonomes Tool: YouTube 16:9 → Shorts 9:16 mit Zoomcuts und Untertiteln"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "yt-dlp>=2024.8.0",
+  "faster-whisper>=1.0.0",
+  "click>=8.1.0",
+  "tqdm>=4.66.0",
+]
+
+[project.scripts]
+shorts-maker = "shorts_maker.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["shorts_maker*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
