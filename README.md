@@ -7,12 +7,22 @@ Autonomes CLI-Tool: lange **16:9 YouTube-Videos** → interessante **9:16 Shorts
 - modernen **Zoomcuts** / Punch-Ins
 - synchronen **Untertiteln** (typisch **3–5 Wörter** gleichzeitig)
 
-## Quickstart
+## Quickstart (macOS)
 
 ```bash
+git clone https://github.com/DerKIProfi/Marius-Lerho.git
+cd Marius-Lerho
+brew install ffmpeg   # falls noch nicht vorhanden
 python3 -m pip install -e .
-python3 -m shorts_maker "https://www.youtube.com/watch?v=VIDEO_ID" -o output
+
+# Offline-Demo (ohne YouTube / ohne Whisper-Download)
+python3 scripts/demo_local.py
+
+# Echtes Video — Anführungszeichen MÜSSEN geschlossen sein:
+python3 -m shorts_maker "https://www.youtube.com/watch?v=bxl7nOsZQtc" -o output
 ```
+
+Wenn die Shell `dquote>` zeigt, fehlt ein `"` — mit `Ctrl+C` abbrechen und den Befehl neu eingeben.
 
 Oder mit lokaler Datei:
 
