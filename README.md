@@ -7,20 +7,45 @@ Autonomes CLI-Tool: lange **16:9 YouTube-Videos** → interessante **9:16 Shorts
 - modernen **Zoomcuts** / Punch-Ins
 - synchronen **Untertiteln** (typisch **3–5 Wörter** gleichzeitig)
 
-## Quickstart
+## macOS Quickstart
+
+Die Befehle müssen **im geklonten Repo** laufen (nicht im Home-Ordner `~`). Auf dem Mac bitte **`python3`** verwenden.
 
 ```bash
+# 1) Repo holen und hineinwechseln
+git clone https://github.com/DerKIProfi/Marius-Lerho.git
+cd Marius-Lerho
+
+# Optional: PR-Branch mit dem Tool
+git fetch origin cursor/youtube-shorts-tool-62e4
+git checkout cursor/youtube-shorts-tool-62e4
+
+# 2) Abhängigkeiten (ffmpeg + Python-Paket)
+brew install ffmpeg
 python3 -m pip install -e .
-python3 -m shorts_maker "https://www.youtube.com/watch?v=VIDEO_ID" -o output
+
+# 3a) Offline-Demo (ohne YouTube / ohne Whisper-Download)
+python3 scripts/demo_local.py
+
+# 3b) Echtes YouTube-Video (VIDEO_ID durch echte ID ersetzen)
+python3 -m shorts_maker "https://www.youtube.com/watch?v=dQw4w9WgXcQ" -o output
 ```
 
-Oder mit lokaler Datei:
+Wenn `pip` / `python3` fehlen:
 
 ```bash
+xcode-select --install
+brew install python
+```
+
+## Lokale Videodatei
+
+```bash
+cd Marius-Lerho
 python3 -m shorts_maker /pfad/zum/video.mp4 -o output --language de --model base
 ```
 
-Ergebnis:
+## Ergebnis
 
 ```
 output/
@@ -49,13 +74,13 @@ output/
 
 ## Anforderungen
 
-- Python 3.10+
-- `ffmpeg` / `ffprobe` im PATH
+- Python 3.10+ (`python3` auf macOS)
+- `ffmpeg` / `ffprobe` im PATH (`brew install ffmpeg`)
 - optional: GPU für schnellere Whisper-Modelle
 
 ## Tests
 
 ```bash
-python3 -m pip install -e ".[dev]" 2>/dev/null || python3 -m pip install -e . pytest
-pytest -q
+python3 -m pip install -e . pytest
+python3 -m pytest -q
 ```
