@@ -44,10 +44,21 @@ python3 -m pip install -e .
 python3 scripts/demo_local.py
 
 # Echtes YouTube-Video — Anführungszeichen MÜSSEN geschlossen sein:
-python3 -m shorts_maker "https://www.youtube.com/watch?v=DEINE_ID" -o output
+python3 -m shorts_maker "https://www.youtube.com/watch?v=DEINE_ID" -o output --model small
+
+# Nach schlechtem Erstlauf: Transkript neu + zusammenhängende Clips
+python3 -m shorts_maker "https://www.youtube.com/watch?v=DEINE_ID" -o output \
+  --force-transcribe --model small --max-gap 2.0
 ```
 
 Wenn die Shell `dquote>` zeigt, fehlt ein `"` — mit `Ctrl+C` abbrechen und den Befehl neu eingeben.
+
+### Qualitätshinweise
+
+- Shorts werden aus **zusammenhängenden** Sprechabschnitten gebaut (keine Sprünge quer durchs Video).
+- Pausen/Fülllaute werden nur **innerhalb** eines Moments gekürzt.
+- `--model small` (Default) oder `medium` verbessert deutsche Untertitel stark gegenüber `base`/`tiny`.
+- Altes `output/work/transcript.json` bei Fehlerhaftem Text mit `--force-transcribe` neu erzeugen.
 
 Wenn `pip` / `python3` fehlen:
 
