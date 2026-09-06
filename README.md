@@ -1,35 +1,53 @@
 # Shorts Maker
 
-Autonomes CLI-Tool: lange **16:9 YouTube-Videos** → interessante **9:16 Shorts** mit
+Autonomes Tool/Library: lange **16:9 YouTube-Videos** → interessante **9:16 Shorts** mit
 
 - Entfernung von **Pausen** und **Fülllauten** (äh, ähm, um, …)
 - Auswahl spannender Momente (Hook-Heuristik)
 - modernen **Zoomcuts** / Punch-Ins
 - synchronen **Untertiteln** (typisch **3–5 Wörter** gleichzeitig)
 
+## Übergabe an Codex / App-Integration
+
+Für Marius’ Social-Media-App bitte diese Dateien an Codex übergeben:
+
+| Datei | Zweck |
+|-------|--------|
+| [`MARIUS_CODEX_PROMPT.md`](MARIUS_CODEX_PROMPT.md) | Fertiger Prompt zum Einfügen in Codex |
+| [`CODEX_HANDOFF.md`](CODEX_HANDOFF.md) | Verbindliche Agent-Übergabe |
+| [`INTEGRATION.md`](INTEGRATION.md) | Architektur für App-Einbau |
+| [`AGENTS.md`](AGENTS.md) | Kurzregeln für Coding Agents |
+| [`examples/app_integration.py`](examples/app_integration.py) | Minimaler App-Wrapper |
+| [`schemas/pipeline_result.schema.json`](schemas/pipeline_result.schema.json) | Output-Vertrag |
+
+Public API:
+
+```python
+from shorts_maker import PipelineOptions, generate_shorts
+
+result = generate_shorts("https://youtube.com/watch?v=…", "output/job1")
+print(result.to_dict())
+```
+
 ## macOS Quickstart
 
 Die Befehle müssen **im geklonten Repo** laufen (nicht im Home-Ordner `~`). Auf dem Mac bitte **`python3`** verwenden.
 
 ```bash
-# 1) Repo holen und hineinwechseln
 git clone https://github.com/DerKIProfi/Marius-Lerho.git
 cd Marius-Lerho
 
-# Optional: PR-Branch mit dem Tool
-git fetch origin cursor/youtube-shorts-tool-62e4
-git checkout cursor/youtube-shorts-tool-62e4
-
-# 2) Abhängigkeiten (ffmpeg + Python-Paket)
 brew install ffmpeg
 python3 -m pip install -e .
 
-# 3a) Offline-Demo (ohne YouTube / ohne Whisper-Download)
+# Offline-Demo (ohne YouTube / ohne Whisper-Download)
 python3 scripts/demo_local.py
 
-# 3b) Echtes YouTube-Video (VIDEO_ID durch echte ID ersetzen)
-python3 -m shorts_maker "https://www.youtube.com/watch?v=dQw4w9WgXcQ" -o output
+# Echtes YouTube-Video — Anführungszeichen MÜSSEN geschlossen sein:
+python3 -m shorts_maker "https://www.youtube.com/watch?v=DEINE_ID" -o output
 ```
+
+Wenn die Shell `dquote>` zeigt, fehlt ein `"` — mit `Ctrl+C` abbrechen und den Befehl neu eingeben.
 
 Wenn `pip` / `python3` fehlen:
 
@@ -68,15 +86,26 @@ output/
 
 1. **Download** (`yt-dlp`)
 2. **Transkription** (`faster-whisper`, Word-Timestamps + VAD)
-3. **Clean** – Fülllaute & lange Pausen raus, kompakte Timeline
-4. **Moments** – Scoring über Sprechdichte, Hooks (`warum`, `fehler`, `!`, …)
-5. **Render** (`ffmpeg`) – Center-Crop 9:16, Zoomcuts, ASS-Untertitel einbrennen
+3. **Clean** – Fülllaute & lange Pausen raus
+4. **Moments** – Scoring über Sprechdichte / Hooks
+5. **Render** (`ffmpeg`) – 9:16, Zoomcuts, ASS-Untertitel
 
 ## Anforderungen
 
 - Python 3.10+ (`python3` auf macOS)
 - `ffmpeg` / `ffprobe` im PATH (`brew install ffmpeg`)
 - optional: GPU für schnellere Whisper-Modelle
+
+### macOS: ffmpeg mit Untertitel-Support
+
+Homebrew-ffmpeg ist manchmal **ohne libass** gebaut. Dann schlägt der `ass`-Filter fehl.
+Das Tool fällt automatisch auf `drawtext`/Pillow zurück. Für beste Captions:
+
+```bash
+brew install libass
+brew reinstall ffmpeg
+ffmpeg -hide_banner -filters | grep ass
+```
 
 ## Tests
 

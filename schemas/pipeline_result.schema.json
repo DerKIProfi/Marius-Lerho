@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/DerKIProfi/Marius-Lerho/schemas/pipeline_result.schema.json",
+  "title": "ShortsMakerPipelineResult",
+  "type": "object",
+  "required": ["source", "removed_fillers", "removed_pause_seconds", "shorts"],
+  "properties": {
+    "source": { "type": "string" },
+    "removed_fillers": { "type": "integer", "minimum": 0 },
+    "removed_pause_seconds": { "type": "number", "minimum": 0 },
+    "summary_path": { "type": ["string", "null"] },
+    "output_dir": { "type": ["string", "null"] },
+    "shorts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "title", "score", "duration", "start", "end", "captions", "zooms", "transcript"],
+        "properties": {
+          "file": { "type": "string" },
+          "title": { "type": "string" },
+          "score": { "type": "number" },
+          "duration": { "type": "number", "minimum": 0 },
+          "start": { "type": "number", "minimum": 0 },
+          "end": { "type": "number", "minimum": 0 },
+          "captions": { "type": "integer", "minimum": 0 },
+          "zooms": { "type": "integer", "minimum": 0 },
+          "transcript": { "type": "string" }
+        }
+      }
+    }
+  }
+}
