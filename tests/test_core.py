@@ -17,7 +17,7 @@ def test_removes_fillers_and_pauses():
             ("Das", 0.0, 0.2),
             ("ist", 0.25, 0.4),
             ("äh", 0.45, 0.7),
-            ("wichtig", 1.8, 2.2),  # lange Pause davor
+            ("wichtig", 1.8, 2.2),
             ("ähm", 2.3, 2.6),
             ("sofort", 2.7, 3.1),
         ]
@@ -29,7 +29,6 @@ def test_removes_fillers_and_pauses():
     assert texts == ["Das", "ist", "wichtig", "sofort"]
     assert result.removed_fillers == 2
     assert result.removed_pause_seconds > 0.5
-    # bereinigte Timeline kompakter
     assert result.words[-1].end < words[-1].end
 
 
@@ -56,37 +55,37 @@ def test_caption_chunks_are_short():
     assert any("DAS" in c.text.upper() for c in chunks)
 
 
-def test_find_moments_and_zooms():
-    # ~40s synthetischer Monolog
+def test_find_moments_are_contiguous():
+    # Zwei getrennte Sprechblasen weit auseinander — Short darf nicht quer springen
     words: list[Word] = []
     t = 0.0
-    vocab = [
-        "Warum",
-        "das",
-        "wichtig",
-        "ist",
-        "niemand",
-        "kennt",
-        "diesen",
-        "Fehler",
-        "Du",
-        "musst",
-        "sofort",
-        "handeln",
-        "und",
-        "nie",
-        "wieder",
-        "warten",
-    ]
-    for i in range(80):
-        text = vocab[i % len(vocab)]
-        words.append(Word(text=text, start=t, end=t + 0.28))
-        t += 0.35 + (0.8 if i % 10 == 9 else 0.0)
+    vocab = ["Warum", "das", "wichtig", "ist", "niemand", "kennt", "diesen", "Fehler"]
+    for i in range(40):
+        words.append(Word(text=vocab[i % len(vocab)], start=t, end=t + 0.3))
+        t += 0.4
 
-    cleaned = clean_transcript(words, max_pause=0.4)
-    moments = find_moments(cleaned.words, max_shorts=2, target_duration=20, min_duration=12, max_duration=30)
+    # große Lücke
+    t = 200.0
+    for i in range(40):
+        words.append(Word(text=vocab[i % len(vocab)], start=t, end=t + 0.3))
+        t += 0.4
+
+    moments = find_moments(
+        words,
+        max_shorts=2,
+        target_duration=20,
+        min_duration=12,
+        max_duration=30,
+        max_gap=2.0,
+    )
     assert 1 <= len(moments) <= 2
-    assert all(m.duration >= 12 for m in moments)
+    for m in moments:
+        assert m.duration >= 12
+        # Kein Moment darf die 200s-Lücke überspannen
+        assert not (m.start < 50 and m.end > 150)
+        # Interne Gaps begrenzt
+        for i in range(len(m.words) - 1):
+            assert m.words[i + 1].start - m.words[i].end <= 2.0 + 1e-6
 
     zooms = plan_zoom_cuts(moments[0].words)
     assert len(zooms) >= 2

@@ -23,16 +23,32 @@ from shorts_maker.pipeline import run_pipeline
 @click.option(
     "--model",
     "model_size",
-    default="base",
+    default="small",
     show_default=True,
     type=click.Choice(["tiny", "base", "small", "medium", "large-v3"], case_sensitive=False),
-    help="Whisper-Modellgröße",
+    help="Whisper-Modellgröße (small/medium = deutlich bessere Untertitel)",
 )
 @click.option("--max-shorts", default=3, show_default=True, help="Maximale Anzahl Shorts")
 @click.option("--duration", default=35.0, show_default=True, help="Ziel-Länge pro Short in Sekunden")
 @click.option("--min-duration", default=15.0, show_default=True, help="Minimale Short-Länge")
 @click.option("--max-duration", default=59.0, show_default=True, help="Maximale Short-Länge")
-@click.option("--max-pause", default=0.35, show_default=True, help="Max. Pause zwischen Wörtern (s)")
+@click.option(
+    "--max-pause",
+    default=0.55,
+    show_default=True,
+    help="Pausen länger als das werden INNERHALB eines Moments gekürzt",
+)
+@click.option(
+    "--max-gap",
+    default=2.0,
+    show_default=True,
+    help="Max. Lücke zwischen Wörtern für zusammenhängende Momente (Originalzeit)",
+)
+@click.option(
+    "--force-transcribe",
+    is_flag=True,
+    help="Vorhandenes transcript.json ignorieren und neu transkribieren",
+)
 @click.option("--width", default=1080, show_default=True)
 @click.option("--height", default=1920, show_default=True)
 @click.version_option(__version__, prog_name="shorts-maker")
@@ -46,13 +62,15 @@ def main(
     min_duration: float,
     max_duration: float,
     max_pause: float,
+    max_gap: float,
+    force_transcribe: bool,
     width: int,
     height: int,
 ) -> None:
     """Erzeugt Shorts (9:16) aus einem YouTube-Link oder einer lokalen Videodatei.
 
-    Entfernt Pausen/Fülllaute, wählt spannende Momente, setzt Zoomcuts
-    und synchronisierte Untertitel (3–5 Wörter).
+    Wählt zusammenhängende Momente, kürzt nur lokal Pausen/Fülllaute,
+    setzt Zoomcuts und synchronisierte Untertitel (3–5 Wörter).
     """
     lang = None if language.lower() in {"auto", "none"} else language
     run_pipeline(
@@ -65,8 +83,10 @@ def main(
         min_duration=min_duration,
         max_duration=max_duration,
         max_pause=max_pause,
+        max_gap=max_gap,
         width=width,
         height=height,
+        force_transcribe=force_transcribe,
     )
 
 
