@@ -57,6 +57,14 @@ def plan_zoom_cuts(
             deduped[-1] = z
         else:
             deduped.append(z)
+    # Harte Obergrenze — verschachtelte ffmpeg-ifs werden sonst unbrauchbar groß
+    if len(deduped) > 20:
+        head = deduped[:1]
+        body = deduped[1:-1]
+        tail = deduped[-1:]
+        step = max(1, len(body) // 18)
+        body = body[::step][:18]
+        deduped = head + body + tail
     return deduped
 
 

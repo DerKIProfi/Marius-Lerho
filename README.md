@@ -95,6 +95,19 @@ output/
 - `ffmpeg` / `ffprobe` im PATH
 - optional: GPU für schnellere Whisper-Modelle
 
+### macOS: ffmpeg mit Untertitel-Support
+
+Homebrew-ffmpeg ist manchmal **ohne libass** gebaut. Dann schlägt der `ass`-Filter fehl.
+Das Tool fällt automatisch auf `drawtext` zurück. Für beste Captions:
+
+```bash
+brew install libass
+brew reinstall ffmpeg
+ffmpeg -hide_banner -filters | grep ass
+```
+
+Wenn die Shell `dquote>` zeigt, fehlt ein schließendes `"` — `Ctrl+C`, Befehl neu eingeben.
+
 ## Tests
 
 ```bash
