@@ -13,7 +13,6 @@ from yt_dlp.utils import DownloadError
 # merge — that is what fails on many macOS Homebrew ffmpeg builds.
 _FORMAT_CANDIDATES: tuple[dict, ...] = (
     {
-        # Single-file progressive only (video+audio already muxed)
         "label": "progressive≤720p",
         "format": (
             "best[height<=720][acodec!=none][vcodec!=none][ext=mp4]/"
@@ -24,13 +23,11 @@ _FORMAT_CANDIDATES: tuple[dict, ...] = (
         "merge_output_format": None,
     },
     {
-        # Classic progressive itags (360p/720p) when YouTube still offers them
         "label": "itag-18/22",
         "format": "18/22",
         "merge_output_format": None,
     },
     {
-        # H.264 + AAC → remux to MP4 (no re-encode; works without libass/freetype)
         "label": "avc1+mp4a→mp4",
         "format": (
             "bv*[vcodec^=avc1][height<=720]+ba[acodec^=mp4a]/"
@@ -40,7 +37,6 @@ _FORMAT_CANDIDATES: tuple[dict, ...] = (
         "merge_output_format": "mp4",
     },
     {
-        # Any streams → MKV (accepts VP9/Opus; ffmpeg copy usually succeeds)
         "label": "any→mkv",
         "format": "bv*[height<=720]+ba/bv*+ba/b",
         "merge_output_format": "mkv",
@@ -48,7 +44,12 @@ _FORMAT_CANDIDATES: tuple[dict, ...] = (
 )
 
 _VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".mov", ".m4v"}
-_MIN_COMPLETE_BYTES = 1_000_000  # ignore tiny/partial leftovers
+_MIN_COMPLETE_BYTES = 1_000_000
+# yt-dlp leftovers: VIDEOID.f303.webm, VIDEOID.temp.mp4, *.part, …
+_PARTIAL_NAME = re.compile(
+    r"(?:\.f\d+\.)|(?:\.temp\.)|(?:\.part$)|(?:\.ytdl$)|(?:\.temp$)",
+    re.IGNORECASE,
+)
 
 
 def download_video(url_or_path: str, out_dir: Path, *, max_height: int = 720) -> Path:
@@ -63,7 +64,9 @@ def download_video(url_or_path: str, out_dir: Path, *, max_height: int = 720) ->
     out_dir.mkdir(parents=True, exist_ok=True)
     url = url_or_path
 
-    _cleanup_partials(out_dir)
+    freed = _cleanup_partials(out_dir)
+    if freed:
+        print(f"  🧹 {freed} partielle Download-Datei(en) gelöscht")
 
     existing = find_existing_download(url, out_dir)
     if existing is not None:
@@ -75,8 +78,8 @@ def download_video(url_or_path: str, out_dir: Path, *, max_height: int = 720) ->
         free_gb = free / (1024**3)
         raise OSError(
             f"Zu wenig freier Speicher ({free_gb:.1f} GiB). "
-            "Bitte Platz schaffen (z.B. alte Dateien in output/work/download löschen) "
-            "oder eine lokale MP4 übergeben."
+            "Bitte Platz schaffen (z.B. *.f*.webm / *.temp.mp4 in "
+            "output/work/download löschen) oder eine lokale MP4 übergeben."
         )
 
     last_error: Exception | None = None
@@ -94,7 +97,6 @@ def download_video(url_or_path: str, out_dir: Path, *, max_height: int = 720) ->
             "no_warnings": False,
             "retries": 3,
             "fragment_retries": 3,
-            # Prefer remux over re-encode when merging
             "postprocessor_args": {"ffmpeg": ["-c", "copy"]},
         }
         merge_fmt = candidate.get("merge_output_format")
@@ -105,7 +107,6 @@ def download_video(url_or_path: str, out_dir: Path, *, max_height: int = 720) ->
             with YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 filename = Path(ydl.prepare_filename(info))
-                # Extension may change after merge (mp4→mkv etc.)
                 if not filename.exists():
                     alt = filename.with_suffix(f".{merge_fmt}") if merge_fmt else None
                     if alt is not None and alt.exists():
@@ -123,19 +124,18 @@ def download_video(url_or_path: str, out_dir: Path, *, max_height: int = 720) ->
             msg = str(exc).lower()
             print(f"  ✗ Strategie fehlgeschlagen: {exc}")
             _cleanup_partials(out_dir)
-            # Retry next strategy for merge/format issues; abort on disk full.
             if "no space left" in msg or "errno 28" in msg:
                 raise OSError(
                     "Kein Speicherplatz mehr während des Downloads. "
-                    "Alte/partielle Dateien in output/work/download löschen, "
-                    "dann erneut versuchen — oder lokale MP4 nutzen."
+                    "Partielle Dateien in output/work/download löschen "
+                    "oder lokale MP4 nutzen."
                 ) from exc
             continue
         except OSError as exc:
             if getattr(exc, "errno", None) == 28 or "no space left" in str(exc).lower():
                 raise OSError(
                     "Kein Speicherplatz mehr während des Downloads. "
-                    "Alte/partielle Dateien in output/work/download löschen."
+                    "Partielle Dateien in output/work/download löschen."
                 ) from exc
             raise
 
@@ -163,6 +163,35 @@ def extract_youtube_id(url: str) -> str | None:
     return None
 
 
+def pick_best_local_video(paths: list[Path]) -> Path:
+    """Pick the best complete video among expanded shell globs."""
+    files = [p.expanduser() for p in paths if p.expanduser().is_file()]
+    complete = [
+        p
+        for p in files
+        if p.suffix.lower() in _VIDEO_EXTS
+        and p.stat().st_size >= _MIN_COMPLETE_BYTES
+        and not _is_partial_name(p.name)
+    ]
+    if not complete:
+        raise FileNotFoundError(
+            "Keine fertige Videodatei gefunden. "
+            "Bitte eine konkrete MP4 angeben (nicht die *.f*.webm / *.temp.mp4)."
+        )
+    # Prefer mp4/mkv, then largest
+    complete.sort(
+        key=lambda p: (
+            0 if p.suffix.lower() in {".mp4", ".mkv"} else 1,
+            -p.stat().st_size,
+        )
+    )
+    return complete[0].resolve()
+
+
+def _is_partial_name(name: str) -> bool:
+    return bool(_PARTIAL_NAME.search(name))
+
+
 def _find_by_id(out_dir: Path, video_id: str) -> Path | None:
     if not video_id or not out_dir.exists():
         return None
@@ -173,31 +202,32 @@ def _find_by_id(out_dir: Path, video_id: str) -> Path | None:
         and video_id in p.name
         and p.suffix.lower() in _VIDEO_EXTS
         and p.stat().st_size >= _MIN_COMPLETE_BYTES
-        and not p.name.endswith(".part")
+        and not _is_partial_name(p.name)
     ]
     if not matches:
         return None
-    matches.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    # Prefer final mp4/mkv containers, then largest (complete > failed temp)
+    matches.sort(
+        key=lambda p: (
+            0 if p.suffix.lower() in {".mp4", ".mkv"} else 1,
+            -p.stat().st_size,
+        )
+    )
     return matches[0].resolve()
 
 
-def _cleanup_partials(out_dir: Path) -> None:
-    """Remove yt-dlp leftovers that waste disk and break reuse."""
+def _cleanup_partials(out_dir: Path) -> int:
+    """Remove yt-dlp leftovers that waste disk and break reuse. Returns count deleted."""
     if not out_dir.exists():
-        return
+        return 0
+    deleted = 0
     for p in out_dir.iterdir():
         if not p.is_file():
             continue
-        name = p.name
-        if (
-            name.endswith(".part")
-            or name.endswith(".ytdl")
-            or name.endswith(".temp")
-            or ".f" in name
-            and name.endswith((".mp4", ".m4a", ".webm", ".mkv"))
-            and re.search(r"\.f\d+\.", name)
-        ):
+        if _is_partial_name(p.name):
             try:
                 p.unlink()
+                deleted += 1
             except OSError:
                 pass
+    return deleted

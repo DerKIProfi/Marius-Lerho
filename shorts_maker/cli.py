@@ -9,7 +9,7 @@ from shorts_maker.pipeline import run_pipeline
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
-@click.argument("url_or_path")
+@click.argument("url_or_paths", nargs=-1, required=True)
 @click.option(
     "-o",
     "--output",
@@ -53,7 +53,7 @@ from shorts_maker.pipeline import run_pipeline
 @click.option("--height", default=1920, show_default=True)
 @click.version_option(__version__, prog_name="shorts-maker")
 def main(
-    url_or_path: str,
+    url_or_paths: tuple[str, ...],
     output_dir: Path,
     language: str,
     model_size: str,
@@ -71,7 +71,25 @@ def main(
 
     Wählt zusammenhängende Momente, kürzt nur lokal Pausen/Fülllaute,
     setzt Zoomcuts und synchronisierte Untertitel (3–5 Wörter).
+
+    Bei Shell-Globs mit mehreren Treffern (inkl. *.f*.webm / *.temp.mp4)
+    wird automatisch die beste fertige Videodatei gewählt.
     """
+    from shorts_maker.download import pick_best_local_video
+
+    if len(url_or_paths) == 1:
+        url_or_path = url_or_paths[0]
+        candidate = Path(url_or_path).expanduser()
+        if not candidate.is_file() and any(ch in url_or_path for ch in "*?["):
+            raise click.ClickException(
+                f"Keine Datei für Muster: {url_or_path}"
+            )
+    else:
+        paths = [Path(p) for p in url_or_paths]
+        chosen = pick_best_local_video(paths)
+        click.echo(f"Mehrere Dateien gefunden — nutze: {chosen.name}")
+        url_or_path = str(chosen)
+
     lang = None if language.lower() in {"auto", "none"} else language
     run_pipeline(
         url_or_path,

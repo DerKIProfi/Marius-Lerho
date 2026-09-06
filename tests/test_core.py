@@ -104,12 +104,27 @@ def test_extract_youtube_id():
 
 def test_find_existing_download(tmp_path: Path):
     video = tmp_path / "Akustikkonzert [bxl7nOsZQtc].mp4"
-    video.write_bytes(b"x" * 1_000_001)  # must look like a complete file
-    tiny = tmp_path / "partial [bxl7nOsZQtc].mp4"
-    tiny.write_bytes(b"tiny")
+    video.write_bytes(b"x" * 1_000_001)
+    # Partials must never win over a finished file
+    (tmp_path / "bxl7nOsZQtc.f303.webm").write_bytes(b"y" * 2_000_000)
+    (tmp_path / "bxl7nOsZQtc.temp.mp4").write_bytes(b"z" * 1_500_000)
+    (tmp_path / "partial [bxl7nOsZQtc].mp4").write_bytes(b"tiny")
     found = find_existing_download(
         "https://www.youtube.com/watch?v=bxl7nOsZQtc",
         tmp_path,
     )
     assert found == video.resolve()
     assert find_existing_download("https://www.youtube.com/watch?v=otherid", tmp_path) is None
+
+
+def test_pick_best_local_video(tmp_path: Path):
+    from shorts_maker.download import pick_best_local_video
+
+    good = tmp_path / "Mein_Konzert_bxl7nOsZQtc.mp4"
+    good.write_bytes(b"a" * 3_000_000)
+    partial = tmp_path / "bxl7nOsZQtc.temp.mp4"
+    partial.write_bytes(b"b" * 2_000_000)
+    frag = tmp_path / "bxl7nOsZQtc.f251.webm"
+    frag.write_bytes(b"c" * 4_000_000)
+    chosen = pick_best_local_video([good, partial, frag])
+    assert chosen == good.resolve()

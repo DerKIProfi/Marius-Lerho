@@ -75,33 +75,28 @@ python3 -m shorts_maker /pfad/zum/video.mp4 -o output --language de --model smal
 
 ### Download-Probleme (macOS)
 
-**„Postprocessing: Conversion failed!“** = ffmpeg konnte Video+Audio nicht mergen.
-**„No space left on device“** = Festplatte voll (Konzert-Downloads sind oft >800 MB).
-
-Das Tool lädt bevorzugt progressive/≤720p-Formate, merged notfalls nach MKV und nutzt vorhandene Downloads erneut.
+Festplatte oft voll + yt-dlp legt `.f*.webm` / `.temp.mp4` neben die fertige MP4.
+In zsh **keine `#`-Kommentare** in die Shell tippen (sonst `command not found: #`).
 
 ```bash
-# 1) Platz schaffen + Reste löschen
+cd ~/Marius-Lerho
 df -h .
 rm -f output/work/download/*.part output/work/download/*.ytdl
-rm -f output/work/download/*.f*.mp4 output/work/download/*.f*.m4a
+rm -f output/work/download/*.f*.webm output/work/download/*.f*.mp4
+rm -f output/work/download/*.temp.mp4
 
-# 2) Branch + Tool aktualisieren
 git fetch origin cursor/fix-coherent-shorts-62e4
 git checkout cursor/fix-coherent-shorts-62e4
 git pull --ff-only
-python3 -m pip install -e . -U yt-dlp
+python3 -m pip install -e .
 
-# 3a) Wenn schon eine fertige MP4 da ist — Download überspringen:
-ls -lh output/work/download/*bxl7nOsZQtc*
-python3 -m shorts_maker output/work/download/*bxl7nOsZQtc*.mp4 -o output \
-  --force-transcribe --model small
-
-# 3b) Sonst neu laden (≤720p, robuster Merge):
-python3 -m shorts_maker "https://www.youtube.com/watch?v=bxl7nOsZQtc" -o output \
-  --force-transcribe --model small
+python3 -m shorts_maker \
+  "output/work/download/Mein_Akustikkonzert_in_Hauset_-_Folge_23_bxl7nOsZQtc.mp4" \
+  -o output --force-transcribe --model small
 ```
 
+Fertige Datei immer in Anführungszeichen angeben. Ein nacktes `*bxl7nOsZQtc*`
+kann mehrere Dateien treffen — neuere Builds wählen dann automatisch die beste MP4.
 ## Ergebnis
 
 ```
