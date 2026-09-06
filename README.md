@@ -95,15 +95,17 @@ output/
 - `ffmpeg` / `ffprobe` im PATH
 - optional: GPU für schnellere Whisper-Modelle
 
-### macOS: ffmpeg mit Untertitel-Support
+### macOS: Untertitel ohne libass/freetype
 
-Homebrew-ffmpeg ist manchmal **ohne libass** gebaut. Dann schlägt der `ass`-Filter fehl.
-Das Tool fällt automatisch auf `drawtext` zurück. Für beste Captions:
+Viele Homebrew-ffmpeg-Builds auf Intel-Macs haben **weder `ass` noch `drawtext`**.
+Das Tool fällt dann automatisch auf **Pillow-PNG-Overlays** zurück und schreibt zusätzlich
+`.srt` / `.ass` Sidecar-Dateien neben jedes Short.
+
+Kein `brew reinstall ffmpeg` nötig. Nur:
 
 ```bash
-brew install libass
-brew reinstall ffmpeg
-ffmpeg -hide_banner -filters | grep ass
+python3 -m pip install -e .
+python3 -m shorts_maker "https://www.youtube.com/watch?v=DEINE_ID" -o output
 ```
 
 Wenn die Shell `dquote>` zeigt, fehlt ein schließendes `"` — `Ctrl+C`, Befehl neu eingeben.

@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import warnings
 from functools import lru_cache
 from pathlib import Path
 
-from shorts_maker.captions import chunk_captions, write_ass
+from shorts_maker.captions import chunk_captions, write_ass, write_srt
 from shorts_maker.effects import even_dimensions, plan_zoom_cuts, zoom_expr
 from shorts_maker.models import CaptionChunk, EditPlan, Moment, Word
 
@@ -23,31 +24,53 @@ def _run(cmd: list[str]) -> None:
 
 
 @lru_cache(maxsize=1)
-def _ffmpeg_has_ass() -> bool:
-    """True, wenn ffmpeg mit libass gebaut wurde (Filter ass/subtitles)."""
+def _ffmpeg_filters() -> set[str]:
     result = subprocess.run(
         ["ffmpeg", "-hide_banner", "-filters"],
         capture_output=True,
         text=True,
     )
-    text = (result.stdout or "") + (result.stderr or "")
-    for line in text.splitlines():
+    names: set[str] = set()
+    for line in (result.stdout or "").splitlines():
+        if "->" not in line:
+            continue
         parts = line.split()
-        if len(parts) >= 2 and parts[1] in {"ass", "subtitles"}:
-            return True
-    return False
+        if len(parts) >= 2:
+            names.add(parts[1])
+    return names
+
+
+def _has_filter(name: str) -> bool:
+    return name in _ffmpeg_filters()
+
+
+@lru_cache(maxsize=1)
+def _use_new_filter_script_flag() -> bool:
+    result = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-h"],
+        capture_output=True,
+        text=True,
+    )
+    help_text = (result.stdout or "") + (result.stderr or "")
+    return "-/filter_complex" in help_text
+
+
+def _filter_script_args(script_path: Path) -> list[str]:
+    # ffmpeg 8+: -/filter_complex FILE ; older: -filter_complex_script FILE
+    if _use_new_filter_script_flag():
+        return ["-/filter_complex", str(script_path)]
+    return ["-filter_complex_script", str(script_path)]
 
 
 def _find_font() -> Path | None:
-    candidates = [
+    for path in (
         Path("/System/Library/Fonts/Supplemental/Arial Bold.ttf"),
         Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
         Path("/Library/Fonts/Arial.ttf"),
         Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
         Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
         Path("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"),
-    ]
-    for path in candidates:
+    ):
         if path.exists():
             return path
     return None
@@ -67,44 +90,38 @@ def _escape_filter_path(path: Path) -> str:
     return s.replace(":", "\\:").replace("'", "\\'")
 
 
-def _caption_filter(
+def _write_caption_pngs(
     captions: list[CaptionChunk],
-    *,
     work_dir: Path,
+    *,
     width: int,
     height: int,
-) -> str:
-    """ASS wenn libass da ist, sonst drawtext-Fallback (macOS Homebrew oft ohne libass)."""
-    if _ffmpeg_has_ass():
-        ass_path = work_dir / "captions.ass"
-        write_ass(ass_path, captions, play_res_x=width, play_res_y=height)
-        return f"ass=filename='{_escape_filter_path(ass_path)}'"
+) -> list[Path]:
+    from PIL import Image, ImageDraw, ImageFont
 
-    font = _find_font()
+    font_path = _find_font()
     font_size = max(36, min(56, int(width * 0.048)))
+    font = (
+        ImageFont.truetype(str(font_path), font_size)
+        if font_path is not None
+        else ImageFont.load_default()
+    )
     y = int(height * 0.72)
-    if not captions:
-        return "null"
-
-    filters: list[str] = []
-    for chunk in captions:
-        text = _escape_drawtext(chunk.text.upper())
-        start = max(0.0, chunk.start)
-        end = max(start + 0.05, chunk.end)
-        fontfile = f":fontfile='{_escape_filter_path(font)}'" if font else ""
-        filters.append(
-            "drawtext="
-            f"text='{text}'"
-            f"{fontfile}"
-            f":fontsize={font_size}"
-            ":fontcolor=white"
-            ":borderw=5"
-            ":bordercolor=black"
-            ":x=(w-text_w)/2"
-            f":y={y}"
-            f":enable='between(t\\,{start:.3f}\\,{end:.3f})'"
-        )
-    return ",".join(filters)
+    paths: list[Path] = []
+    for i, chunk in enumerate(captions):
+        img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        text = chunk.text.upper()
+        bbox = draw.textbbox((0, 0), text, font=font)
+        tw = bbox[2] - bbox[0]
+        x = (width - tw) // 2
+        for dx, dy in ((-3, 0), (3, 0), (0, -3), (0, 3), (-2, -2), (2, 2), (-2, 2), (2, -2)):
+            draw.text((x + dx, y + dy), text, font=font, fill=(0, 0, 0, 255))
+        draw.text((x, y), text, font=font, fill=(255, 255, 255, 255))
+        out = work_dir / f"cap_{i:03d}.png"
+        img.save(out)
+        paths.append(out)
+    return paths
 
 
 def probe_video(path: Path) -> tuple[int, int, float]:
@@ -192,7 +209,14 @@ def render_short(
     fps: int = 30,
     crf: int = 20,
 ) -> Path:
-    """Rendert einen 9:16 Short mit Zoomcuts und eingebrannten Untertiteln."""
+    """Rendert einen 9:16 Short mit Zoomcuts und Untertiteln.
+
+    Caption-Reihenfolge:
+    1. ffmpeg ``ass`` (libass)
+    2. ffmpeg ``drawtext`` (freetype)
+    3. Pillow-PNGs + ``overlay``
+    4. nur Sidecar ``.srt`` / ``.ass``
+    """
     width, height = even_dimensions(width, height)
     output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -215,7 +239,9 @@ def render_short(
     if not moment_slices:
         raise ValueError("Keine Medienbereiche für diesen Moment gefunden")
 
-    # Neben Output statt /var/folders — stabilere Pfade auf macOS
+    write_srt(output.with_suffix(".srt"), plan.captions)
+    write_ass(output.with_suffix(".ass"), plan.captions, play_res_x=width, play_res_y=height)
+
     work_dir = output.parent / f".render_{output.stem}"
     if work_dir.exists():
         shutil.rmtree(work_dir)
@@ -240,17 +266,72 @@ def render_short(
         filter_parts.append(f"{''.join(parts_audio)}concat=n={n}:v=0:a=1[acat]")
 
         zoom = zoom_expr(plan.zooms, width=width, height=height)
-        caption = _caption_filter(plan.captions, work_dir=work_dir, width=width, height=height)
-
         filter_parts.append(
             f"[vcat]crop={crop_w}:{crop_h}:{crop_x}:{crop_y},"
             f"scale={width}:{height}:flags=lanczos,"
             f"{zoom},"
             f"fps={fps},"
-            f"{caption}[vout]"
+            f"format=yuv420p[vbase]"
         )
 
-        # Script-Datei vermeidet Shell/Quote-Probleme bei langen Zoom-Expressions
+        extra_inputs: list[str] = []
+        mode = "none"
+
+        if plan.captions and _has_filter("ass"):
+            ass_path = work_dir / "burn.ass"
+            write_ass(ass_path, plan.captions, play_res_x=width, play_res_y=height)
+            filter_parts.append(
+                f"[vbase]ass=filename='{_escape_filter_path(ass_path)}'[vout]"
+            )
+            mode = "ass"
+        elif plan.captions and _has_filter("drawtext"):
+            font = _find_font()
+            font_size = max(36, min(56, int(width * 0.048)))
+            y = int(height * 0.72)
+            label_in = "vbase"
+            for i, chunk in enumerate(plan.captions):
+                text = _escape_drawtext(chunk.text.upper())
+                start = max(0.0, chunk.start)
+                end = max(start + 0.05, chunk.end)
+                fontfile = f":fontfile='{_escape_filter_path(font)}'" if font else ""
+                label_out = "vout" if i == len(plan.captions) - 1 else f"vt{i}"
+                filter_parts.append(
+                    f"[{label_in}]drawtext=text='{text}'{fontfile}"
+                    f":fontsize={font_size}:fontcolor=white:borderw=5:bordercolor=black"
+                    f":x=(w-text_w)/2:y={y}"
+                    f":enable='between(t\\,{start:.3f}\\,{end:.3f})'[{label_out}]"
+                )
+                label_in = label_out
+            mode = "drawtext"
+        elif plan.captions:
+            try:
+                pngs = _write_caption_pngs(
+                    plan.captions, work_dir, width=width, height=height
+                )
+                label_in = "vbase"
+                for i, (chunk, png) in enumerate(zip(plan.captions, pngs)):
+                    extra_inputs.extend(["-i", str(png)])
+                    start = max(0.0, chunk.start)
+                    end = max(start + 0.05, chunk.end)
+                    label_out = "vout" if i == len(pngs) - 1 else f"vo{i}"
+                    filter_parts.append(
+                        f"[{label_in}][{i + 1}:v]overlay=0:0:format=auto:"
+                        f"enable='between(t\\,{start:.3f}\\,{end:.3f})'[{label_out}]"
+                    )
+                    label_in = label_out
+                mode = "pillow"
+            except Exception as exc:  # noqa: BLE001
+                warnings.warn(
+                    f"Caption-Burn-in nicht möglich ({exc}). "
+                    f"Sidecar: {output.with_suffix('.srt')}",
+                    stacklevel=2,
+                )
+                filter_parts.append("[vbase]null[vout]")
+                mode = "sidecar"
+                extra_inputs = []
+        else:
+            filter_parts.append("[vbase]null[vout]")
+
         script_path = work_dir / "filter.txt"
         script_path.write_text(";\n".join(filter_parts), encoding="utf-8")
 
@@ -259,8 +340,8 @@ def render_short(
             "-y",
             "-i",
             str(source),
-            "-filter_complex_script",
-            str(script_path),
+            *extra_inputs,
+            *_filter_script_args(script_path),
             "-map",
             "[vout]",
             "-map",
@@ -281,6 +362,13 @@ def render_short(
             str(output),
         ]
         _run(cmd)
+        if mode == "sidecar":
+            print(
+                f"⚠ ffmpeg ohne ass/drawtext — Short ohne Burn-in; "
+                f"Untertitel: {output.with_suffix('.srt').name}"
+            )
+        elif mode == "pillow":
+            print("◎ Untertitel via Pillow-Overlay (ffmpeg ohne libass/freetype)")
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
 
