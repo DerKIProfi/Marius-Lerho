@@ -43,9 +43,11 @@ python3 -m pip install -e .
 # Offline-Demo (ohne YouTube / ohne Whisper-Download)
 python3 scripts/demo_local.py
 
-# Echtes YouTube-Video
+# Echtes YouTube-Video — Anführungszeichen MÜSSEN geschlossen sein:
 python3 -m shorts_maker "https://www.youtube.com/watch?v=DEINE_ID" -o output
 ```
+
+Wenn die Shell `dquote>` zeigt, fehlt ein `"` — mit `Ctrl+C` abbrechen und den Befehl neu eingeben.
 
 Wenn `pip` / `python3` fehlen:
 

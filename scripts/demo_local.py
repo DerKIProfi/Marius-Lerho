@@ -49,42 +49,47 @@ SCRIPT = [
 
 
 def make_video(path: Path, duration: float = 14.0) -> None:
+    """Erzeugt ein einfaches 16:9 Testvideo ohne drawtext (macOS-kompatibel).
+
+    drawtext braucht oft eine explizite fontfile und bricht auf Macs ohne
+    libfreetype-Defaultfont. Für die Pipeline-Demo reichen Boxen + Ton.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    # 16:9 „Talking head“ Simulation: Gradient + Titelbox
+    # Nur lavfi color/drawbox/sine — kein drawtext (Font-Probleme auf macOS)
     filter_complex = (
-        "color=c=0x0b1320:s=1280x720:d={dur}:r=30[bg];"
+        f"color=c=0x0b1320:s=1280x720:d={duration}:r=30[bg];"
         "[bg]drawbox=x=480:y=120:w=320:h=420:color=0x1c2541:t=fill,"
-        "drawbox=x=560:y=200:w=160:h=160:color=0x5bc0be:t=fill,"
-        "drawtext=text='DEMO TALK':fontsize=48:fontcolor=white:x=(w-text_w)/2:y=40,"
-        "drawtext=text='16\\:9 Source':fontsize=28:fontcolor=0x94a3b8:x=(w-text_w)/2:y=660[vout]"
-    ).format(dur=duration)
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-y",
-            "-filter_complex",
-            filter_complex,
-            "-f",
-            "lavfi",
-            "-i",
-            f"sine=frequency=196:duration={duration}",
-            "-map",
-            "[vout]",
-            "-map",
-            "0:a",
-            "-c:v",
-            "libx264",
-            "-pix_fmt",
-            "yuv420p",
-            "-c:a",
-            "aac",
-            "-shortest",
-            str(path),
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+        "drawbox=x=560:y=200:w=160:h=160:color=0x5bc0be:t=fill[vout]"
     )
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-filter_complex",
+        filter_complex,
+        "-f",
+        "lavfi",
+        "-i",
+        f"sine=frequency=196:duration={duration}",
+        "-map",
+        "[vout]",
+        "-map",
+        "0:a",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-shortest",
+        str(path),
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(
+            "ffmpeg Demo-Video fehlgeschlagen.\n"
+            f"cmd: {' '.join(cmd)}\n"
+            f"stderr:\n{result.stderr or result.stdout}"
+        )
 
 
 def main() -> None:
