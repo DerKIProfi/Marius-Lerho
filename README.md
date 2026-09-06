@@ -70,7 +70,36 @@ brew install python
 ## Lokale Videodatei
 
 ```bash
-python3 -m shorts_maker /pfad/zum/video.mp4 -o output --language de --model base
+python3 -m shorts_maker /pfad/zum/video.mp4 -o output --language de --model small
+```
+
+### Download-Probleme (macOS)
+
+**„Postprocessing: Conversion failed!“** = ffmpeg konnte Video+Audio nicht mergen.
+**„No space left on device“** = Festplatte voll (Konzert-Downloads sind oft >800 MB).
+
+Das Tool lädt bevorzugt progressive/≤720p-Formate, merged notfalls nach MKV und nutzt vorhandene Downloads erneut.
+
+```bash
+# 1) Platz schaffen + Reste löschen
+df -h .
+rm -f output/work/download/*.part output/work/download/*.ytdl
+rm -f output/work/download/*.f*.mp4 output/work/download/*.f*.m4a
+
+# 2) Branch + Tool aktualisieren
+git fetch origin cursor/fix-coherent-shorts-62e4
+git checkout cursor/fix-coherent-shorts-62e4
+git pull --ff-only
+python3 -m pip install -e . -U yt-dlp
+
+# 3a) Wenn schon eine fertige MP4 da ist — Download überspringen:
+ls -lh output/work/download/*bxl7nOsZQtc*
+python3 -m shorts_maker output/work/download/*bxl7nOsZQtc*.mp4 -o output \
+  --force-transcribe --model small
+
+# 3b) Sonst neu laden (≤720p, robuster Merge):
+python3 -m shorts_maker "https://www.youtube.com/watch?v=bxl7nOsZQtc" -o output \
+  --force-transcribe --model small
 ```
 
 ## Ergebnis
@@ -89,7 +118,7 @@ output/
 | `--max-shorts` | 3 | Anzahl erzeugter Clips |
 | `--duration` | 35 | Ziel-Länge (Sekunden) |
 | `--max-pause` | 0.35 | Pausen länger als das werden rausgeschnitten |
-| `--model` | base | Whisper-Größe (`tiny` … `large-v3`) |
+| `--model` | small | Whisper-Größe (`tiny` … `large-v3`) |
 | `--language` | de | Sprache (`auto` für Erkennung) |
 
 ## Pipeline

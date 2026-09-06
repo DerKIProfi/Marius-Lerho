@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from shorts_maker.captions import build_ass, chunk_captions
 from shorts_maker.clean import clean_transcript
+from shorts_maker.download import extract_youtube_id, find_existing_download
 from shorts_maker.effects import plan_zoom_cuts
 from shorts_maker.models import Word
 from shorts_maker.moments import find_moments
@@ -90,3 +93,23 @@ def test_find_moments_are_contiguous():
     zooms = plan_zoom_cuts(moments[0].words)
     assert len(zooms) >= 2
     assert zooms[0].scale >= 1.0
+
+
+def test_extract_youtube_id():
+    assert extract_youtube_id("https://www.youtube.com/watch?v=bxl7nOsZQtc") == "bxl7nOsZQtc"
+    assert extract_youtube_id("https://youtu.be/bxl7nOsZQtc") == "bxl7nOsZQtc"
+    assert extract_youtube_id("https://www.youtube.com/shorts/abc123XYZ") == "abc123XYZ"
+    assert extract_youtube_id("https://example.com/nope") is None
+
+
+def test_find_existing_download(tmp_path: Path):
+    video = tmp_path / "Akustikkonzert [bxl7nOsZQtc].mp4"
+    video.write_bytes(b"x" * 1_000_001)  # must look like a complete file
+    tiny = tmp_path / "partial [bxl7nOsZQtc].mp4"
+    tiny.write_bytes(b"tiny")
+    found = find_existing_download(
+        "https://www.youtube.com/watch?v=bxl7nOsZQtc",
+        tmp_path,
+    )
+    assert found == video.resolve()
+    assert find_existing_download("https://www.youtube.com/watch?v=otherid", tmp_path) is None
