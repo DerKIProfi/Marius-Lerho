@@ -31,7 +31,7 @@ print(result.to_dict())
 
 ## macOS Quickstart
 
-Die Befehle müssen **im geklonten Repo** laufen (nicht im Home-Ordner `~`). Auf dem Mac **`python3`** verwenden.
+Die Befehle müssen **im geklonten Repo** laufen (nicht im Home-Ordner `~`). Auf dem Mac bitte **`python3`** verwenden.
 
 ```bash
 git clone https://github.com/DerKIProfi/Marius-Lerho.git
@@ -59,6 +59,7 @@ brew install python
 ## Lokale Videodatei
 
 ```bash
+cd Marius-Lerho
 python3 -m shorts_maker /pfad/zum/video.mp4 -o output --language de --model base
 ```
 
@@ -92,21 +93,19 @@ output/
 ## Anforderungen
 
 - Python 3.10+ (`python3` auf macOS)
-- `ffmpeg` / `ffprobe` im PATH
+- `ffmpeg` / `ffprobe` im PATH (`brew install ffmpeg`)
 - optional: GPU für schnellere Whisper-Modelle
 
 ### macOS: ffmpeg mit Untertitel-Support
 
 Homebrew-ffmpeg ist manchmal **ohne libass** gebaut. Dann schlägt der `ass`-Filter fehl.
-Das Tool fällt automatisch auf `drawtext` zurück. Für beste Captions:
+Das Tool fällt automatisch auf `drawtext`/Pillow zurück. Für beste Captions:
 
 ```bash
 brew install libass
 brew reinstall ffmpeg
 ffmpeg -hide_banner -filters | grep ass
 ```
-
-Wenn die Shell `dquote>` zeigt, fehlt ein schließendes `"` — `Ctrl+C`, Befehl neu eingeben.
 
 ## Tests
 
