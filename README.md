@@ -73,19 +73,32 @@ brew install python
 python3 -m shorts_maker /pfad/zum/video.mp4 -o output --language de --model small
 ```
 
-### Download: „Postprocessing: Conversion failed!“
+### Download-Probleme (macOS)
 
-Das ist ein **ffmpeg-Merge**-Fehler (Video+Audio zusammenfügen), nicht die Shorts-Pipeline.
-Das Tool versucht zuerst progressive Ein-Datei-Formate und nutzt vorhandene Downloads erneut.
+**„Postprocessing: Conversion failed!“** = ffmpeg konnte Video+Audio nicht mergen.
+**„No space left on device“** = Festplatte voll (Konzert-Downloads sind oft >800 MB).
 
-Falls es trotzdem scheitert:
+Das Tool lädt bevorzugt progressive/≤720p-Formate, merged notfalls nach MKV und nutzt vorhandene Downloads erneut.
 
 ```bash
-# yt-dlp aktualisieren
-python3 -m pip install -U yt-dlp
+# 1) Platz schaffen + Reste löschen
+df -h .
+rm -f output/work/download/*.part output/work/download/*.ytdl
+rm -f output/work/download/*.f*.mp4 output/work/download/*.f*.m4a
 
-# Bereits heruntergeladene Datei wiederverwenden (Video-ID im Dateinamen):
-python3 -m shorts_maker "output/work/download/"*bxl7nOsZQtc*.mp4 -o output \
+# 2) Branch + Tool aktualisieren
+git fetch origin cursor/fix-coherent-shorts-62e4
+git checkout cursor/fix-coherent-shorts-62e4
+git pull --ff-only
+python3 -m pip install -e . -U yt-dlp
+
+# 3a) Wenn schon eine fertige MP4 da ist — Download überspringen:
+ls -lh output/work/download/*bxl7nOsZQtc*
+python3 -m shorts_maker output/work/download/*bxl7nOsZQtc*.mp4 -o output \
+  --force-transcribe --model small
+
+# 3b) Sonst neu laden (≤720p, robuster Merge):
+python3 -m shorts_maker "https://www.youtube.com/watch?v=bxl7nOsZQtc" -o output \
   --force-transcribe --model small
 ```
 

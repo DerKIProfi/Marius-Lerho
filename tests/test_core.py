@@ -104,7 +104,9 @@ def test_extract_youtube_id():
 
 def test_find_existing_download(tmp_path: Path):
     video = tmp_path / "Akustikkonzert [bxl7nOsZQtc].mp4"
-    video.write_bytes(b"fake")
+    video.write_bytes(b"x" * 1_000_001)  # must look like a complete file
+    tiny = tmp_path / "partial [bxl7nOsZQtc].mp4"
+    tiny.write_bytes(b"tiny")
     found = find_existing_download(
         "https://www.youtube.com/watch?v=bxl7nOsZQtc",
         tmp_path,
