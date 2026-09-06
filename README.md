@@ -70,7 +70,23 @@ brew install python
 ## Lokale Videodatei
 
 ```bash
-python3 -m shorts_maker /pfad/zum/video.mp4 -o output --language de --model base
+python3 -m shorts_maker /pfad/zum/video.mp4 -o output --language de --model small
+```
+
+### Download: „Postprocessing: Conversion failed!“
+
+Das ist ein **ffmpeg-Merge**-Fehler (Video+Audio zusammenfügen), nicht die Shorts-Pipeline.
+Das Tool versucht zuerst progressive Ein-Datei-Formate und nutzt vorhandene Downloads erneut.
+
+Falls es trotzdem scheitert:
+
+```bash
+# yt-dlp aktualisieren
+python3 -m pip install -U yt-dlp
+
+# Bereits heruntergeladene Datei wiederverwenden (Video-ID im Dateinamen):
+python3 -m shorts_maker "output/work/download/"*bxl7nOsZQtc*.mp4 -o output \
+  --force-transcribe --model small
 ```
 
 ## Ergebnis
@@ -89,7 +105,7 @@ output/
 | `--max-shorts` | 3 | Anzahl erzeugter Clips |
 | `--duration` | 35 | Ziel-Länge (Sekunden) |
 | `--max-pause` | 0.35 | Pausen länger als das werden rausgeschnitten |
-| `--model` | base | Whisper-Größe (`tiny` … `large-v3`) |
+| `--model` | small | Whisper-Größe (`tiny` … `large-v3`) |
 | `--language` | de | Sprache (`auto` für Erkennung) |
 
 ## Pipeline
