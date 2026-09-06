@@ -7,26 +7,6 @@ Autonomes Tool/Library: lange **16:9 YouTube-Videos** → interessante **9:16 Sh
 - modernen **Zoomcuts** / Punch-Ins
 - synchronen **Untertiteln** (typisch **3–5 Wörter** gleichzeitig)
 
-<<<<<<< HEAD
-## Quickstart (macOS)
-
-```bash
-git clone https://github.com/DerKIProfi/Marius-Lerho.git
-cd Marius-Lerho
-brew install ffmpeg   # falls noch nicht vorhanden
-python3 -m pip install -e .
-
-# Offline-Demo (ohne YouTube / ohne Whisper-Download)
-python3 scripts/demo_local.py
-
-# Echtes Video — Anführungszeichen MÜSSEN geschlossen sein:
-python3 -m shorts_maker "https://www.youtube.com/watch?v=bxl7nOsZQtc" -o output
-```
-
-Wenn die Shell `dquote>` zeigt, fehlt ein `"` — mit `Ctrl+C` abbrechen und den Befehl neu eingeben.
-
-Oder mit lokaler Datei:
-=======
 ## Übergabe an Codex / App-Integration
 
 Für Marius’ Social-Media-App bitte diese Dateien an Codex übergeben:
@@ -63,9 +43,11 @@ python3 -m pip install -e .
 # Offline-Demo (ohne YouTube / ohne Whisper-Download)
 python3 scripts/demo_local.py
 
-# Echtes YouTube-Video
+# Echtes YouTube-Video — Anführungszeichen MÜSSEN geschlossen sein:
 python3 -m shorts_maker "https://www.youtube.com/watch?v=DEINE_ID" -o output
 ```
+
+Wenn die Shell `dquote>` zeigt, fehlt ein `"` — mit `Ctrl+C` abbrechen und den Befehl neu eingeben.
 
 Wenn `pip` / `python3` fehlen:
 
@@ -75,7 +57,6 @@ brew install python
 ```
 
 ## Lokale Videodatei
->>>>>>> origin/main
 
 ```bash
 python3 -m shorts_maker /pfad/zum/video.mp4 -o output --language de --model base
