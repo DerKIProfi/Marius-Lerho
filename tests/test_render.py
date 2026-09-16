@@ -7,7 +7,27 @@ from pathlib import Path
 from shorts_maker.clean import clean_transcript
 from shorts_maker.models import Word
 from shorts_maker.moments import find_moments
-from shorts_maker.render import build_edit_plan, render_short
+from shorts_maker.render import (
+    _ffmpeg_major_version,
+    _filter_script_args,
+    _use_new_filter_script_flag,
+    build_edit_plan,
+    render_short,
+)
+
+
+def test_filter_script_args_match_ffmpeg_generation(tmp_path: Path):
+    script = tmp_path / "filter.txt"
+    script.write_text("null", encoding="utf-8")
+    args = _filter_script_args(script)
+    major = _ffmpeg_major_version()
+    if major is not None and major >= 8:
+        assert args[0] == "-/filter_complex"
+    elif _use_new_filter_script_flag():
+        assert args[0] == "-/filter_complex"
+    else:
+        assert args[0] == "-filter_complex_script"
+    assert args[1] == str(script)
 
 
 def _make_source(path: Path, duration: float = 12.0) -> None:

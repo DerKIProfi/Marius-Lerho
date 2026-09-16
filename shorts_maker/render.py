@@ -46,7 +46,27 @@ def _has_filter(name: str) -> bool:
 
 
 @lru_cache(maxsize=1)
+def _ffmpeg_major_version() -> int | None:
+    result = subprocess.run(
+        [ffmpeg_path(), "-version"],
+        capture_output=True,
+        text=True,
+    )
+    text = (result.stdout or "") + (result.stderr or "")
+    # e.g. "ffmpeg version 9.0.1" / "ffmpeg version n6.1.1-3ubuntu5"
+    import re
+
+    m = re.search(r"ffmpeg version (?:n)?(\d+)", text)
+    return int(m.group(1)) if m else None
+
+
+@lru_cache(maxsize=1)
 def _use_new_filter_script_flag() -> bool:
+    """ffmpeg 8+ replaced -filter_complex_script with -/filter_complex FILE."""
+    major = _ffmpeg_major_version()
+    if major is not None:
+        return major >= 8
+
     result = subprocess.run(
         [ffmpeg_path(), "-hide_banner", "-h"],
         capture_output=True,
@@ -57,7 +77,7 @@ def _use_new_filter_script_flag() -> bool:
 
 
 def _filter_script_args(script_path: Path) -> list[str]:
-    # ffmpeg 8+: -/filter_complex FILE ; older: -filter_complex_script FILE
+    # ffmpeg 8+/9: -/filter_complex FILE ; older: -filter_complex_script FILE
     if _use_new_filter_script_flag():
         return ["-/filter_complex", str(script_path)]
     return ["-filter_complex_script", str(script_path)]
