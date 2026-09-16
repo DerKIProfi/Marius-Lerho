@@ -99,6 +99,12 @@ def download_video(url_or_path: str, out_dir: Path, *, max_height: int = 720) ->
             "fragment_retries": 3,
             "postprocessor_args": {"ffmpeg": ["-c", "copy"]},
         }
+        try:
+            from shorts_maker.ffmpeg_bin import ffmpeg_dir_for_ytdlp
+
+            ydl_opts["ffmpeg_location"] = ffmpeg_dir_for_ytdlp()
+        except Exception:
+            pass
         merge_fmt = candidate.get("merge_output_format")
         if merge_fmt:
             ydl_opts["merge_output_format"] = merge_fmt

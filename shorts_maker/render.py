@@ -9,6 +9,7 @@ from pathlib import Path
 
 from shorts_maker.captions import chunk_captions, write_ass, write_srt
 from shorts_maker.effects import even_dimensions, plan_zoom_cuts, zoom_expr
+from shorts_maker.ffmpeg_bin import ffmpeg_path, ffprobe_path
 from shorts_maker.models import CaptionChunk, EditPlan, Moment, Word
 
 
@@ -26,7 +27,7 @@ def _run(cmd: list[str]) -> None:
 @lru_cache(maxsize=1)
 def _ffmpeg_filters() -> set[str]:
     result = subprocess.run(
-        ["ffmpeg", "-hide_banner", "-filters"],
+        [ffmpeg_path(), "-hide_banner", "-filters"],
         capture_output=True,
         text=True,
     )
@@ -47,7 +48,7 @@ def _has_filter(name: str) -> bool:
 @lru_cache(maxsize=1)
 def _use_new_filter_script_flag() -> bool:
     result = subprocess.run(
-        ["ffmpeg", "-hide_banner", "-h"],
+        [ffmpeg_path(), "-hide_banner", "-h"],
         capture_output=True,
         text=True,
     )
@@ -125,30 +126,47 @@ def _write_caption_pngs(
 
 
 def probe_video(path: Path) -> tuple[int, int, float]:
-    result = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-select_streams",
-            "v:0",
-            "-show_entries",
-            "stream=width,height,duration",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "json",
-            str(path),
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    data = json.loads(result.stdout)
-    stream = data["streams"][0]
-    width = int(stream["width"])
-    height = int(stream["height"])
-    duration = float(stream.get("duration") or data["format"]["duration"])
+    probe = ffprobe_path()
+    if probe:
+        result = subprocess.run(
+            [
+                probe,
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=width,height,duration",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "json",
+                str(path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        data = json.loads(result.stdout)
+        stream = data["streams"][0]
+        width = int(stream["width"])
+        height = int(stream["height"])
+        duration = float(stream.get("duration") or data["format"]["duration"])
+        return width, height, duration
+
+    # Fallback ohne ffprobe (z.B. nur imageio-ffmpeg): PyAV
+    import av
+
+    with av.open(str(path)) as container:
+        stream = container.streams.video[0]
+        width = int(stream.width)
+        height = int(stream.height)
+        if stream.duration is not None and stream.time_base is not None:
+            duration = float(stream.duration * stream.time_base)
+        elif container.duration is not None:
+            duration = float(container.duration) / av.time_base
+        else:
+            duration = 0.0
     return width, height, duration
 
 
@@ -336,7 +354,7 @@ def render_short(
         script_path.write_text(";\n".join(filter_parts), encoding="utf-8")
 
         cmd = [
-            "ffmpeg",
+            ffmpeg_path(),
             "-y",
             "-i",
             str(source),

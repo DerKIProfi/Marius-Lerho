@@ -32,29 +32,31 @@ oft 1–2 GB Download + Whisper-Modell + Render-Zwischendateien.
 df -h .
 ```
 
-### 2.2 Homebrew (nur macOS, falls noch nicht installiert)
+### 2.2 Python 3.10+
+
+Falls `python3` fehlt: von https://www.python.org/downloads/ den macOS-Installer
+nehmen (Haken bei „Add to PATH“ / „Install Certificates“).
+
+```bash
+python3 --version
+```
+
+### 2.3 ffmpeg — **Homebrew ist NICHT nötig**
+
+Das Tool bringt ffmpeg über das Python-Paket **`imageio-ffmpeg`** mit.
+`brew` brauchst du nicht.
+
+Falls du später trotzdem Homebrew willst (optional):
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-### 2.3 Python 3.10+ und ffmpeg
-
-**macOS:**
+Danach oft noch PATH setzen (Apple Silicon):
 
 ```bash
-brew install python ffmpeg
-python3 --version
-ffmpeg -version
-```
-
-**Linux (Debian/Ubuntu):**
-
-```bash
-sudo apt update
-sudo apt install -y python3 python3-pip python3-venv ffmpeg
-python3 --version
-ffmpeg -version
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
 ```
 
 Hinweis: Viele macOS-ffmpeg-Builds haben **kein** libass/drawtext.
@@ -193,13 +195,18 @@ python3 -m shorts_maker "/pfad/zur/fertigen.mp4" -o output --force-transcribe --
 Kein Problem: Tool rendert Untertitel über Pillow und schreibt Sidecar-Dateien.
 Kein `brew reinstall ffmpeg` nötig.
 
-### Whisper sehr langsam
+### „brew: command not found“ / kein ffmpeg
 
-Auf CPU normal bei langen Videos. Schneller:
+Normal. Homebrew brauchst du nicht. Stattdessen:
 
-- kürzeres Quellvideo, oder
-- `--model base` (etwas schlechtere Untertitel), oder
-- nur 1–2 Shorts: `--max-shorts 1`
+```bash
+cd ~/shorts-maker
+python3 -m pip install -e .
+python3 -c "from shorts_maker.ffmpeg_bin import ffmpeg_path; print(ffmpeg_path())"
+```
+
+Wenn das einen Pfad ausgibt, ist ffmpeg über `imageio-ffmpeg` bereit.
+
 
 ### `dquote>` in der Shell
 

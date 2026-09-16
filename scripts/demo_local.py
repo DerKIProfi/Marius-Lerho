@@ -61,8 +61,10 @@ def make_video(path: Path, duration: float = 14.0) -> None:
         "[bg]drawbox=x=480:y=120:w=320:h=420:color=0x1c2541:t=fill,"
         "drawbox=x=560:y=200:w=160:h=160:color=0x5bc0be:t=fill[vout]"
     )
+    from shorts_maker.ffmpeg_bin import ffmpeg_path
+
     cmd = [
-        "ffmpeg",
+        ffmpeg_path(),
         "-y",
         "-filter_complex",
         filter_complex,
