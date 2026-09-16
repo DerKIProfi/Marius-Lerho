@@ -80,28 +80,22 @@ Das Tool fällt dann automatisch auf **Pillow-Untertitel** zurück — das ist O
 
 ```bash
 cd ~/shorts
-python3.14 -m pip install -e .
-```
-
-Falls `python3.14` nicht existiert, `python3.12` oder die Version aus `python3.XX --version`
-nehmen, die ≥ 3.10 ist — **nicht** das System-`python3` mit 3.9.x.
-
-Optional (empfohlen, separates Environment):
-
-```bash
-cd ~/shorts
 python3.14 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install -U pip
-python3 -m pip install -e .
+python -m pip install -U pip
+python -m pip install -e .
 ```
 
-Bei späteren Terminal-Sitzungen immer wieder:
+Falls `python3.14` nicht existiert, `python3.12` nehmen (≥ 3.10) — **nicht** System-`python3` mit 3.9.x.
+
+**Immer vor der Nutzung** die Umgebung aktivieren:
 
 ```bash
 cd ~/shorts
 source .venv/bin/activate
 ```
+
+Oder alles auf einmal: `bash setup.sh`
 
 ---
 
@@ -205,6 +199,18 @@ python3 -m shorts_maker "/pfad/zur/fertigen.mp4" -o output --force-transcribe --
 
 Kein Problem: Tool rendert Untertitel über Pillow und schreibt Sidecar-Dateien.
 Kein `brew reinstall ffmpeg` nötig.
+
+### „externally-managed-environment“ / PEP 668
+
+Homebrew-Python erlaubt kein `pip install` ins System. Immer eine venv nutzen:
+
+```bash
+cd ~/shorts
+python3.14 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
+python scripts/demo_local.py
+```
 
 ### „requires a different Python: 3.9.6 not in '>=3.10'“
 

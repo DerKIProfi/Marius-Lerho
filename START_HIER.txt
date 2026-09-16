@@ -3,27 +3,26 @@ SHORTS MAKER — START HIER
 
 1. Diesen Ordner entpacken (z.B. nach ~/shorts).
 2. Datei öffnen:  ANLEITUNG_MARIUS.md
-3. Dort Schritt für Schritt folgen.
 
-WICHTIG:
-- Ordnername: ~/shorts
-- Homebrew (brew) ist NICHT nötig
-- Auf macOS oft: python3 = 3.9 (zu alt). Dann python3.14 / python3.12 nutzen!
+WICHTIG auf macOS (Homebrew-Python):
+- NICHT: python3.14 -m pip install -e .
+- SONDERN: erst venv anlegen (sonst „externally-managed-environment“)
 
-Version prüfen:
-
-  python3 --version
-  python3.14 --version
-
-Kurzfassung (macOS, Terminal) — Zeile für Zeile, OHNE #-Kommentare:
+Einmalig einrichten:
 
   cd ~/shorts
-  python3.14 -m pip install -e .
-  python3.14 scripts/demo_local.py
-  python3.14 -m shorts_maker "https://www.youtube.com/watch?v=VIDEO_ID" -o output --model small --force-transcribe
+  python3.14 -m venv .venv
+  source .venv/bin/activate
+  python -m pip install -U pip
+  python -m pip install -e .
+  python scripts/demo_local.py
 
-Oder alles auf einmal (nutzt automatisch eine passende python3.XX):
+Danach bei jedem neuen Terminal:
 
-  bash setup.sh
+  cd ~/shorts
+  source .venv/bin/activate
+  python -m shorts_maker "https://www.youtube.com/watch?v=VIDEO_ID" -o output --model small --force-transcribe
+
+Oder alles auf einmal:  bash setup.sh
 
 Fertige Shorts:  output/shorts/
