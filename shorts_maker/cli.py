@@ -77,13 +77,20 @@ def main(
     """
     from shorts_maker.download import pick_best_local_video
 
+    def _looks_like_url(value: str) -> bool:
+        lower = value.lower()
+        return lower.startswith(("http://", "https://", "www.")) or "youtube.com/" in lower or "youtu.be/" in lower
+
     if len(url_or_paths) == 1:
         url_or_path = url_or_paths[0]
         candidate = Path(url_or_path).expanduser()
-        if not candidate.is_file() and any(ch in url_or_path for ch in "*?["):
-            raise click.ClickException(
-                f"Keine Datei für Muster: {url_or_path}"
-            )
+        # '?' in YouTube-URLs ist kein Shell-Glob — nur lokale Muster prüfen
+        if (
+            not _looks_like_url(url_or_path)
+            and not candidate.is_file()
+            and any(ch in url_or_path for ch in "*?[")
+        ):
+            raise click.ClickException(f"Keine Datei für Muster: {url_or_path}")
     else:
         paths = [Path(p) for p in url_or_paths]
         chosen = pick_best_local_video(paths)
