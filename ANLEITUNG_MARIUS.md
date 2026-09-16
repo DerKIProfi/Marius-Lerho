@@ -217,12 +217,14 @@ python3.14 -m pip install -e .
 python3.14 scripts/demo_local.py
 ```
 
+### „brew: command not found“ / kein ffmpeg
+
 Normal. Homebrew brauchst du nicht. Stattdessen:
 
 ```bash
 cd ~/shorts
-python3 -m pip install -e .
-python3 -c "from shorts_maker.ffmpeg_bin import ffmpeg_path; print(ffmpeg_path())"
+python3.14 -m pip install -e .
+python3.14 -c "from shorts_maker.ffmpeg_bin import ffmpeg_path; print(ffmpeg_path())"
 ```
 
 Wenn das einen Pfad ausgibt, ist ffmpeg über `imageio-ffmpeg` bereit.
