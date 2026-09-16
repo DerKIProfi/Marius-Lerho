@@ -67,18 +67,18 @@ Das Tool fällt dann automatisch auf **Pillow-Untertitel** zurück — das ist O
 ## 3. ZIP entpacken und installieren
 
 1. ZIP auf den Rechner kopieren (USB, AirDrop, Download, …).
-2. Entpacken, z.B. nach `~/shorts-maker`.
+2. Entpacken, z.B. nach `~/shorts`.
 3. Terminal öffnen und:
 
 ```bash
-cd ~/shorts-maker
+cd ~/shorts
 python3 -m pip install -e .
 ```
 
 Optional (empfohlen, separates Environment):
 
 ```bash
-cd ~/shorts-maker
+cd ~/shorts
 python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -U pip
@@ -88,7 +88,7 @@ python3 -m pip install -e .
 Bei späteren Terminal-Sitzungen immer wieder:
 
 ```bash
-cd ~/shorts-maker
+cd ~/shorts
 source .venv/bin/activate
 ```
 
@@ -97,7 +97,7 @@ source .venv/bin/activate
 ## 4. Schnelltest (ohne YouTube)
 
 ```bash
-cd ~/shorts-maker
+cd ~/shorts
 python3 scripts/demo_local.py
 ```
 
@@ -111,7 +111,7 @@ Ergebnis liegt unter `output/demo/`.
 ### Variante A: YouTube-Link
 
 ```bash
-cd ~/shorts-maker
+cd ~/shorts
 python3 -m shorts_maker "https://www.youtube.com/watch?v=VIDEO_ID" -o output \
   --force-transcribe --model small
 ```
@@ -125,7 +125,7 @@ Wichtig:
 ### Variante B: Lokale Videodatei (empfohlen bei wenig Speicher / Download-Problemen)
 
 ```bash
-cd ~/shorts-maker
+cd ~/shorts
 python3 -m shorts_maker "/pfad/zum/video.mp4" -o output \
   --force-transcribe --model small
 ```
@@ -200,7 +200,7 @@ Kein `brew reinstall ffmpeg` nötig.
 Normal. Homebrew brauchst du nicht. Stattdessen:
 
 ```bash
-cd ~/shorts-maker
+cd ~/shorts
 python3 -m pip install -e .
 python3 -c "from shorts_maker.ffmpeg_bin import ffmpeg_path; print(ffmpeg_path())"
 ```
