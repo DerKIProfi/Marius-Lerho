@@ -4,33 +4,47 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "==> Prüfe python3 …"
-command -v python3 >/dev/null || {
-  echo "FEHLER: python3 fehlt."
-  echo "macOS: https://www.python.org/downloads/  (Installer) oder Xcode CLT"
-  exit 1
+pick_python() {
+  local c
+  for c in python3.14 python3.13 python3.12 python3.11 python3.10 python3; do
+    if command -v "$c" >/dev/null 2>&1; then
+      if "$c" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
+        echo "$c"
+        return 0
+      fi
+    fi
+  done
+  return 1
 }
-python3 --version
+
+echo "==> Suche Python >= 3.10 …"
+if ! PY="$(pick_python)"; then
+  echo "FEHLER: Kein Python >= 3.10 gefunden."
+  echo "macOS: https://www.python.org/downloads/  (Installer)"
+  echo "Danach z.B.: python3.14 -m pip install -e ."
+  exit 1
+fi
+echo "Nutze: $PY ($($PY --version 2>&1))"
 
 echo "==> Installiere Python-Paket (inkl. imageio-ffmpeg = ffmpeg ohne brew) …"
-python3 -m pip install -U pip
-python3 -m pip install -e .
+"$PY" -m pip install -U pip
+"$PY" -m pip install -e .
 
 echo "==> Prüfe ffmpeg …"
 if command -v ffmpeg >/dev/null; then
   ffmpeg -version | head -1
 else
   echo "Kein System-ffmpeg — nutze gebündeltes imageio-ffmpeg."
-  python3 - <<'PY'
+  "$PY" - <<'PY'
 from shorts_maker.ffmpeg_bin import ffmpeg_path
 print("OK:", ffmpeg_path())
 PY
 fi
 
 echo "==> Offline-Demo …"
-python3 scripts/demo_local.py
+"$PY" scripts/demo_local.py
 
 echo
-echo "Fertig. Nächster Schritt:"
-echo "  python3 -m shorts_maker \"https://www.youtube.com/watch?v=VIDEO_ID\" -o output --model small --force-transcribe"
+echo "Fertig. Immer dieselbe Python-Version nutzen, z.B.:"
+echo "  $PY -m shorts_maker \"https://www.youtube.com/watch?v=VIDEO_ID\" -o output --model small --force-transcribe"
 echo "Details: ANLEITUNG_MARIUS.md"

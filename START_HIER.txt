@@ -5,17 +5,24 @@ SHORTS MAKER — START HIER
 2. Datei öffnen:  ANLEITUNG_MARIUS.md
 3. Dort Schritt für Schritt folgen.
 
-WICHTIG: Homebrew (brew) ist NICHT nötig.
-ffmpeg kommt über Python (imageio-ffmpeg).
+WICHTIG:
+- Ordnername: ~/shorts
+- Homebrew (brew) ist NICHT nötig
+- Auf macOS oft: python3 = 3.9 (zu alt). Dann python3.14 / python3.12 nutzen!
+
+Version prüfen:
+
+  python3 --version
+  python3.14 --version
 
 Kurzfassung (macOS, Terminal) — Zeile für Zeile, OHNE #-Kommentare:
 
   cd ~/shorts
-  python3 -m pip install -e .
-  python3 scripts/demo_local.py
-  python3 -m shorts_maker "https://www.youtube.com/watch?v=VIDEO_ID" -o output --model small --force-transcribe
+  python3.14 -m pip install -e .
+  python3.14 scripts/demo_local.py
+  python3.14 -m shorts_maker "https://www.youtube.com/watch?v=VIDEO_ID" -o output --model small --force-transcribe
 
-Oder alles auf einmal:
+Oder alles auf einmal (nutzt automatisch eine passende python3.XX):
 
   bash setup.sh
 

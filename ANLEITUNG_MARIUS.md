@@ -34,13 +34,21 @@ df -h .
 
 ### 2.2 Python 3.10+
 
-Falls `python3` fehlt: von https://www.python.org/downloads/ den macOS-Installer
-nehmen (Haken bei „Add to PATH“ / „Install Certificates“).
+Auf macOS zeigt `python3` oft noch **Apple 3.9.6**, auch wenn neuere Python-Versionen
+installiert sind. Prüfen:
 
 ```bash
 python3 --version
+python3.14 --version
+python3.12 --version
+which -a python3
 ```
 
+Es muss **≥ 3.10** sein. Wenn `python3` = 3.9.x ist, immer die neue Version nutzen
+(z.B. `python3.14` oder `python3.12`).
+
+Falls gar keine neue Version da ist: von https://www.python.org/downloads/ den
+macOS-Installer nehmen.
 ### 2.3 ffmpeg — **Homebrew ist NICHT nötig**
 
 Das Tool bringt ffmpeg über das Python-Paket **`imageio-ffmpeg`** mit.
@@ -72,14 +80,17 @@ Das Tool fällt dann automatisch auf **Pillow-Untertitel** zurück — das ist O
 
 ```bash
 cd ~/shorts
-python3 -m pip install -e .
+python3.14 -m pip install -e .
 ```
+
+Falls `python3.14` nicht existiert, `python3.12` oder die Version aus `python3.XX --version`
+nehmen, die ≥ 3.10 ist — **nicht** das System-`python3` mit 3.9.x.
 
 Optional (empfohlen, separates Environment):
 
 ```bash
 cd ~/shorts
-python3 -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -U pip
 python3 -m pip install -e .
@@ -195,7 +206,16 @@ python3 -m shorts_maker "/pfad/zur/fertigen.mp4" -o output --force-transcribe --
 Kein Problem: Tool rendert Untertitel über Pillow und schreibt Sidecar-Dateien.
 Kein `brew reinstall ffmpeg` nötig.
 
-### „brew: command not found“ / kein ffmpeg
+### „requires a different Python: 3.9.6 not in '>=3.10'“
+
+Das System-`python3` ist zu alt. Neuere Version verwenden:
+
+```bash
+python3.14 --version
+cd ~/shorts
+python3.14 -m pip install -e .
+python3.14 scripts/demo_local.py
+```
 
 Normal. Homebrew brauchst du nicht. Stattdessen:
 
