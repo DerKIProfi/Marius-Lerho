@@ -1,0 +1,16 @@
+SHORTS MAKER — START HIER
+=========================
+
+1. Diesen Ordner entpacken (z.B. nach ~/shorts-maker).
+2. Datei öffnen:  ANLEITUNG_MARIUS.md
+3. Dort Schritt für Schritt folgen.
+
+Kurzfassung (macOS, Terminal):
+
+  cd ~/shorts-maker
+  brew install python ffmpeg
+  python3 -m pip install -e .
+  python3 scripts/demo_local.py
+  python3 -m shorts_maker "https://www.youtube.com/watch?v=VIDEO_ID" -o output --model small --force-transcribe
+
+Fertige Shorts:  output/shorts/
